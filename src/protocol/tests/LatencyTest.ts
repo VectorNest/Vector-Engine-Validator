@@ -1,41 +1,46 @@
 import { HumanEvaluationTest } from "@/base/HumanEvaluationTest";
 import { Validation } from "../validation";
+import { getCLIPEmbedding } from "@/utils/clip";
 import { parseTime } from "@/utils/parse-time";
 
 export type LatencyTestOutput = {
   query: string;
-  responseTimeMs: number;
+  latencyMs: number;
 };
 
 export class LatencyTest extends HumanEvaluationTest<LatencyTestOutput, Validation> {
-  protected override readonly waitEvaluationsFor = parseTime("30s");
+  protected override readonly waitEvaluationsFor = parseTime("0s");
 
   async getOutputs(validation: Validation): Promise<LatencyTestOutput[]> {
-    const query = "a futuristic city skyline at night";
+    const outputs: LatencyTestOutput[] = [];
 
-    const start = Date.now();
-    await validation.callEndpoint("/search", {
-      id: validation.resource.id,
-      pc: validation.resource.ptAddress,
-      vectorField: "image_embedding",
-      query,
-      options: { limit: 3 },
-    });
-    const end = Date.now();
+    for (const collection of validation.getTestCollections()) {
+      for (const item of collection.items) {
+        const query = item.text;
+        const queryEmbedding = await getCLIPEmbedding(query);
 
-    return [
-      {
-        query,
-        responseTimeMs: end - start,
-      },
-    ];
+        const start = Date.now();
+        await validation.callEndpoint("/searchInCollection", {
+          id: validation.resource.id,
+          pc: validation.resource.protocol,
+          collection: collection.name,
+          vectorField: "embedding",
+          query: queryEmbedding,
+          options: { limit: 3 },
+        });
+        const latency = Date.now() - start;
+
+        outputs.push({ query, latencyMs: latency });
+      }
+    }
+
+    return outputs;
   }
 
   override evaluate(output: LatencyTestOutput): number {
-    if (output.responseTimeMs <= 500) return 1.0;
-    if (output.responseTimeMs <= 1000) return 0.8;
-    if (output.responseTimeMs <= 1500) return 0.5;
-    if (output.responseTimeMs <= 3000) return 0.2;
-    return 0.0;
+    if (output.latencyMs < 500) return 1.0;
+    if (output.latencyMs < 1000) return 0.8;
+    if (output.latencyMs < 2000) return 0.5;
+    return 0.2;
   }
 }

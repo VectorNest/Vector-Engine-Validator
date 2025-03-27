@@ -57,6 +57,12 @@ export type Resource = {
   providerAddress: Address;
   operatorAddress: Address;
   ptAddress: Address;
+  protocol: Address;
+  description: string;
+  image: string;
+  url: string;
+  tags: string[];
+  createdAt: Date;
 };
 
 export type MaybePromise<T> = T | Promise<T>;
