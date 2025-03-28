@@ -188,6 +188,7 @@ function parseEnvVariables() {
       SLASHER_ADDRESS: addressSchema.optional(),
       TOKEN_ADDRESS: addressSchema.optional(),
       USDC_ADDRESS: addressSchema.optional(),
+      UNSPLASH_ACCESS_KEY: z.string(),
     })
     .superRefine((value, ctx) => {
       if (
@@ -245,3 +246,8 @@ export const config = {
   // async process, it should be done somewhere else (check index.ts)
   validators: {} as Record<string, Validator>,
 };
+
+export interface Config {
+  // ... other config properties ...
+  UNSPLASH_ACCESS_KEY: string;
+}

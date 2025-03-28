@@ -1,14 +1,15 @@
-import { HumanEvaluationTest } from "@/base/HumanEvaluationTest";
+import { TestResult } from "@/core/types";
+import { AbstractTest } from "@/base/AbstractTest";
 import { Validation } from "../validation";
 import { getCLIPEmbedding } from "@/utils/clip";
 import { cosineSimilarity } from "@/utils/embedding-utils";
-import { parseTime } from "@/utils/parse-time";
 
-export type RankingTestOutput = {
+interface RankingTestOutput {
   query: string;
   rankedSimilarities: number[];
   monotonicityScore: number;
-};
+  score: number;
+}
 
 function checkMonotonicity(similarities: number[]): number {
   let score = 1;
@@ -20,10 +21,8 @@ function checkMonotonicity(similarities: number[]): number {
   return Math.max(0, score);
 }
 
-export class RankingTest extends HumanEvaluationTest<RankingTestOutput, Validation> {
-  protected override readonly waitEvaluationsFor = parseTime("0s");
-
-  async getOutputs(validation: Validation): Promise<RankingTestOutput[]> {
+export class RankingTest extends AbstractTest<RankingTestOutput[], Validation> {
+  async execute(validation: Validation): Promise<TestResult<RankingTestOutput[]>> {
     const outputs: RankingTestOutput[] = [];
 
     for (const collection of validation.getTestCollections()) {
@@ -48,14 +47,18 @@ export class RankingTest extends HumanEvaluationTest<RankingTestOutput, Validati
           query,
           rankedSimilarities: similarities,
           monotonicityScore,
+          score: monotonicityScore // In this case, the monotonicity score is our final score
         });
       }
     }
 
-    return outputs;
-  }
+    const avgScore = outputs.reduce((sum, out) => sum + out.score, 0) / outputs.length;
 
-  override evaluate(output: RankingTestOutput): number {
-    return output.monotonicityScore;
+    return {
+      isSuccess: true,
+      raw: `Average ranking score: ${avgScore}`,
+      result: outputs,
+      testName: this.name
+    };
   }
 }
