@@ -1,17 +1,23 @@
-import { HumanEvaluationTest } from "@/base/HumanEvaluationTest";
+import { TestResult } from "@/core/types";
+import { AbstractTest } from "@/base/AbstractTest";
 import { Validation } from "../validation";
 import { getCLIPEmbedding } from "@/utils/clip";
-import { parseTime } from "@/utils/parse-time";
 
-export type LatencyTestOutput = {
+interface LatencyTestOutput {
   query: string;
   latencyMs: number;
-};
+  score: number;
+}
 
-export class LatencyTest extends HumanEvaluationTest<LatencyTestOutput, Validation> {
-  protected override readonly waitEvaluationsFor = parseTime("0s");
+export class LatencyTest extends AbstractTest<LatencyTestOutput[], Validation> {
+  private calculateScore(latencyMs: number): number {
+    if (latencyMs < 500) return 1.0;
+    if (latencyMs < 1000) return 0.8;
+    if (latencyMs < 2000) return 0.5;
+    return 0.2;
+  }
 
-  async getOutputs(validation: Validation): Promise<LatencyTestOutput[]> {
+  async execute(validation: Validation): Promise<TestResult<LatencyTestOutput[]>> {
     const outputs: LatencyTestOutput[] = [];
 
     for (const collection of validation.getTestCollections()) {
@@ -28,19 +34,20 @@ export class LatencyTest extends HumanEvaluationTest<LatencyTestOutput, Validati
           query: queryEmbedding,
           options: { limit: 3 },
         });
-        const latency = Date.now() - start;
+        const latencyMs = Date.now() - start;
+        const score = this.calculateScore(latencyMs);
 
-        outputs.push({ query, latencyMs: latency });
+        outputs.push({ query, latencyMs, score });
       }
     }
 
-    return outputs;
-  }
+    const avgScore = outputs.reduce((sum, out) => sum + out.score, 0) / outputs.length;
 
-  override evaluate(output: LatencyTestOutput): number {
-    if (output.latencyMs < 500) return 1.0;
-    if (output.latencyMs < 1000) return 0.8;
-    if (output.latencyMs < 2000) return 0.5;
-    return 0.2;
+    return {
+      isSuccess: true,
+      raw: `Average latency score: ${avgScore}`,
+      result: outputs,
+      testName: this.name
+    };
   }
 }

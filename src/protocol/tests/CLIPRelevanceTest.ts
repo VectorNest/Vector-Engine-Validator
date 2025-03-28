@@ -1,14 +1,17 @@
-import { HumanEvaluationTest } from "@/base/HumanEvaluationTest";
+import { TestResult } from "@/core/types";
+import { AbstractTest } from "@/base/AbstractTest";
 import { Validation } from "../validation";
 import { cosineSimilarity } from "@/utils/embedding-utils";
 import { getCLIPEmbedding } from "@/utils/clip";
-import { parseTime } from "@/utils/parse-time";
-import { CLIPRelevanceOutput } from "./types";
 
-export class CLIPRelevanceTest extends HumanEvaluationTest<CLIPRelevanceOutput, Validation> {
-  protected override readonly waitEvaluationsFor = parseTime("0s");
+interface CLIPRelevanceOutput {
+  query: string;
+  image: string;
+  similarity: number;
+}
 
-  async getOutputs(validation: Validation): Promise<CLIPRelevanceOutput[]> {
+export class CLIPRelevanceTest extends AbstractTest<CLIPRelevanceOutput[], Validation> {
+  async execute(validation: Validation): Promise<TestResult<CLIPRelevanceOutput[]>> {
     const outputs: CLIPRelevanceOutput[] = [];
 
     for (const collection of validation.getTestCollections()) {
@@ -27,16 +30,19 @@ export class CLIPRelevanceTest extends HumanEvaluationTest<CLIPRelevanceOutput, 
 
         const top = response?.body?.[0];
         if (top?.embedding) {
-          const score = cosineSimilarity(embedding, top.embedding);
-          outputs.push({ query, image: top.image || top.text, similarity: score });
+          const similarity = cosineSimilarity(embedding, top.embedding);
+          outputs.push({ query, image: top.image || top.text, similarity });
         }
       }
     }
 
-    return outputs;
-  }
+    const avgSimilarity = outputs.reduce((sum, out) => sum + out.similarity, 0) / outputs.length;
 
-  override evaluate(output: CLIPRelevanceOutput): number {
-    return output.similarity;
+    return {
+      isSuccess: true,
+      raw: `Average similarity score: ${avgSimilarity}`,
+      result: outputs,
+      testName: this.name
+    };
   }
 }
