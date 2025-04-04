@@ -35,7 +35,7 @@ export async function prepareTestCollection(
     { name: "label", type: "String" },
   ];
 
-  await validation.callEndpoint("/collection", {
+  await validation.postEndpoint("/collection", {
     id: resource.id,
     pc: resource.protocol,
     name,
@@ -56,7 +56,7 @@ export async function prepareTestCollection(
     });
   }
 
-  await validation.callEndpoint("/data", {
+  await validation.postEndpoint("/data", {
     id: resource.id,
     pc: resource.protocol,
     collection: name,
@@ -72,7 +72,7 @@ export async function cleanupTestCollection(
   resource: Resource,
   name: string
 ) {
-  await validation.callEndpoint("/collection", {
+  await validation.deleteEndpoint("/collection", {
     id: resource.id,
     pc: resource.protocol,
     name,
