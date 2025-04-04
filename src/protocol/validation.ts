@@ -97,6 +97,22 @@ export class Validation extends BaseValidation {
     });
   }
 
+  async postEndpoint(path: `/${string}`, body: any) {
+    return await this.pipe.send(this.resource.operatorAddress, {
+      path,
+      method: PipeMethod.POST,
+      body,
+    });
+  }
+
+  async deleteEndpoint(path: `/${string}`, body: any) {
+    return await this.pipe.send(this.resource.operatorAddress, {
+      path,
+      method: PipeMethod.DELETE,
+      body,
+    });
+  }
+
   getTestCollections(): PreparedCollection[] {
     return this.testCollections;
   }
