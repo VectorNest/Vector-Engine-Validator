@@ -93,7 +93,7 @@ src/
 │       ├── LatencyTest.ts
 │       └── ConsistencyTest.ts
 ├── base/
-│   └── HumanEvaluationTest.ts   # Auto-scoring base class
+│   └── AbstractTest.ts   # Auto-scoring base class
 ```
 
 ---
